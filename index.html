@@ -3654,7 +3654,7 @@ function fsStartListeners(){
   if(!db) return;
 
   // INVENTARIO — usar hasPendingWrites para ignorar eco de escritura propia
-  db.collection('ferromax').doc('inventario').onSnapshot(
+  _fsUnsubscribers.push(db.collection('ferromax').doc('inventario').onSnapshot(
     {includeMetadataChanges: true},
     function(snap){
       if(!snap.exists) return;
@@ -3672,10 +3672,10 @@ function fsStartListeners(){
       fsShowStatus('connected');
     },
     function(e){ console.error('listener inventario:', e); fsShowStatus('error'); }
-  );
+  ));
 
   // TICKETS
-  db.collection('ferromax').doc('tickets').onSnapshot(
+  _fsUnsubscribers.push(db.collection('ferromax').doc('tickets').onSnapshot(
     {includeMetadataChanges: true},
     function(snap){
       if(!snap.exists || snap.metadata.hasPendingWrites) return;
@@ -3685,10 +3685,10 @@ function fsStartListeners(){
       if((d.ticketCounter||1) > ticketCounter) ticketCounter = d.ticketCounter;
     },
     function(e){ console.error('listener tickets:', e); }
-  );
+  ));
 
   // USUARIOS
-  db.collection('ferromax').doc('usuarios').onSnapshot(
+  _fsUnsubscribers.push(db.collection('ferromax').doc('usuarios').onSnapshot(
     {includeMetadataChanges: true},
     function(snap){
       if(!snap.exists || snap.metadata.hasPendingWrites) return;
@@ -3699,10 +3699,10 @@ function fsStartListeners(){
       if(!currentUser) buildLoginGrid();
     },
     function(e){ console.error('listener usuarios:', e); }
-  );
+  ));
 
   // CLIENTES
-  db.collection('ferromax').doc('clientes').onSnapshot(
+  _fsUnsubscribers.push(db.collection('ferromax').doc('clientes').onSnapshot(
     {includeMetadataChanges: true},
     function(snap){
       if(!snap.exists || snap.metadata.hasPendingWrites) return;
@@ -3710,10 +3710,10 @@ function fsStartListeners(){
       if(document.getElementById('clientesBody')) renderClientes();
     },
     function(e){ console.error('listener clientes:', e); }
-  );
+  ));
 
   // LOGÍSTICA
-  db.collection('ferromax').doc('logistica').onSnapshot(
+  _fsUnsubscribers.push(db.collection('ferromax').doc('logistica').onSnapshot(
     {includeMetadataChanges: true},
     function(snap){
       if(!snap.exists || snap.metadata.hasPendingWrites) return;
@@ -3726,10 +3726,64 @@ function fsStartListeners(){
       if(document.getElementById('logFlotaContainer')) renderLogFlota();
     },
     function(e){ console.error('listener logistica:', e); }
-  );
+  ));
 
   console.log('Listeners tiempo real activos ✓');
 }
+// ── RECONEXIÓN AUTOMÁTICA (Chrome móvil suspende WebSockets) ─────────────────
+var _fsUnsubscribers = [];
+
+function fsStopListeners(){
+  _fsUnsubscribers.forEach(function(unsub){ try{ unsub(); }catch(e){} });
+  _fsUnsubscribers = [];
+}
+
+function fsReconnect(){
+  if(!db) return;
+  console.log('Reconectando listeners Firebase...');
+  fsShowStatus('syncing');
+  fsStopListeners();
+  // Small delay to let network stabilize
+  setTimeout(function(){
+    fsStartListeners();
+    // Also reload inventory from server to catch missed updates
+    db.collection('ferromax').doc('inventario').get().then(function(snap){
+      if(!snap.exists) return;
+      var d = snap.data();
+      if(!d || !d.products) return;
+      products    = d.products;
+      iCategories = d.categories || iCategories;
+      iBuildCatSelects();
+      iApplyFilters();
+      iRefreshStats();
+      refreshPOSGrid();
+      fsShowStatus('connected');
+      console.log('Inventario recargado tras reconexión ✓');
+    }).catch(function(e){ console.error('Error recargando inventario:', e); });
+  }, 500);
+}
+
+// Reconectar cuando la página vuelve a ser visible (Chrome móvil)
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'visible' && db){
+    console.log('Página visible — reconectando Firebase...');
+    fsReconnect();
+  }
+});
+
+// Reconectar cuando la ventana recupera el foco
+window.addEventListener('focus', function(){
+  if(db) fsReconnect();
+});
+
+// Reconectar cuando recupera conexión a internet
+window.addEventListener('online', function(){
+  if(db){
+    console.log('Conexión restaurada — reconectando...');
+    fsReconnect();
+  }
+});
+
 
 // ── PATCH SAVE FUNCTIONS TO ALSO SAVE TO FIRESTORE ───────────────────────
 // These are called after the original save functions
