@@ -2628,7 +2628,12 @@ function iBuildCatChips(){
 }
 function iBuildCatSelects(){
   const opts='<option value="">— Seleccionar —</option>'+iCategories.map(c=>`<option value="${c}">${c}</option>`).join('');
-  const fc=document.getElementById('fCategory'); if(fc) fc.innerHTML=opts;
+  const fc=document.getElementById('fCategory');
+  if(fc){
+    const prev=fc.value; // save current selection
+    fc.innerHTML=opts;
+    if(prev) fc.value=prev; // restore it
+  }
   const ic=document.getElementById('iFilterCat'); if(ic) ic.innerHTML='<option value="">Todas las categorías</option>'+iCategories.map(c=>`<option value="${c}">${c}</option>`).join('');
 }
 function iBuildProvFilter(){const provs=[...new Set(products.map(p=>p.supplier).filter(Boolean))];const fp=document.getElementById('iFilterProv');if(fp){const cur=fp.value;fp.innerHTML='<option value="">Todos los proveedores</option>'+provs.map(p=>`<option value="${p}">${p}</option>`).join('');fp.value=cur;}const sdl=document.getElementById('supplierDL');if(sdl)sdl.innerHTML=provs.map(p=>`<option value="${p}">`).join('');}
@@ -2812,7 +2817,13 @@ function addCat(){const v=document.getElementById('newCatInput').value.trim();if
 function removeCat(c){iCategories=iCategories.filter(x=>x!==c);iSave();iBuildCatSelects();renderCatMgr();iRefreshStats();showToast('Categoría eliminada');}
 
 // Close overlays clicking outside
-document.querySelectorAll('.prod-modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+document.querySelectorAll('.prod-modal-overlay').forEach(o=>o.addEventListener('click',e=>{
+  // Don't close prodModal or clienteModal on outside click — causes issues on mobile
+  // when switching windows triggers phantom clicks
+  if(e.target===o && o.id!=='prodModal' && o.id!=='clienteModal' && o.id!=='notaFacturaModal'){
+    o.classList.remove('open');
+  }
+}));
 document.getElementById('detailPanel').addEventListener('click',e=>e.stopPropagation());
 document.getElementById('confirmDlg').addEventListener('click',e=>{if(e.target===document.getElementById('confirmDlg'))closeConfirm();});
 
@@ -3768,26 +3779,35 @@ function fsStopListeners(){
 
 function fsReconnect(){
   if(!db) return;
+  // Don't reconnect if product modal is open (user is editing)
+  var prodModalOpen = document.getElementById('prodModal') &&
+    document.getElementById('prodModal').classList.contains('open');
+  if(prodModalOpen){
+    console.log('Modal abierto — reconexión pospuesta');
+    return;
+  }
   console.log('Reconectando listeners Firebase...');
   fsShowStatus('syncing');
   fsStopListeners();
-  // Small delay to let network stabilize
   setTimeout(function(){
     fsStartListeners();
-    // Also reload inventory from server to catch missed updates
     db.collection('ferromax').doc('inventario').get().then(function(snap){
       if(!snap.exists) return;
       var d = snap.data();
       if(!d || !d.products) return;
       products    = d.products;
       iCategories = d.categories || iCategories;
-      iBuildCatSelects();
-      iApplyFilters();
-      iRefreshStats();
-      refreshPOSGrid();
+      // Only update UI if modal is still closed
+      var stillClosed = !document.getElementById('prodModal').classList.contains('open');
+      if(stillClosed){
+        iBuildCatSelects();
+        iApplyFilters();
+        iRefreshStats();
+        refreshPOSGrid();
+      }
       fsShowStatus('connected');
-      console.log('Inventario recargado tras reconexión ✓');
-    }).catch(function(e){ console.error('Error recargando inventario:', e); });
+      console.log('Inventario recargado ✓');
+    }).catch(function(e){ console.error('Error recargando:', e); });
   }, 500);
 }
 
