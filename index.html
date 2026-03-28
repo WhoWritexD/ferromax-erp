@@ -3651,17 +3651,17 @@ async function fsLoadAll(){
     }
 
     // Productos — cargar desde subcolección (nueva arquitectura)
+    // Migrar desde documento legacy si existe (detecta productos faltantes automáticamente)
+    if(invDoc.exists && invDoc.data().products && invDoc.data().products.length > 0){
+      await fsMigrateInventario();
+    }
+
+    // Cargar productos desde subcolección nueva
     await fsLoadProductos();
 
-    // Si subcolección vacía, migrar desde documento legacy
+    // Si aún no hay productos, fallback a localStorage
     if(products.length === 0){
-      if(invDoc.exists && invDoc.data().products && invDoc.data().products.length > 0){
-        products = invDoc.data().products;
-        console.log('Productos desde doc legacy: ' + products.length + ' — migrando...');
-        fsMigrateInventario();
-      } else {
-        iLoadFromStorage();
-      }
+      iLoadFromStorage();
     }
 
     // Tickets
