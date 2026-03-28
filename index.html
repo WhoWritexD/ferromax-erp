@@ -3985,15 +3985,21 @@ async function fsMigrateInventario(){
   if(!db) return;
   try{
     var oldDoc = await db.collection('ferromax').doc('inventario').get();
-    if(!oldDoc.exists) return;
+    if(!oldDoc.exists){ console.log('No hay doc legacy'); return; }
     var oldData = oldDoc.data();
-    if(!oldData.products || !oldData.products.length) return;
-    // Check if already migrated
-    var newColl = await db.collection('ferromax').doc('productos').collection('items').limit(1).get();
-    if(!newColl.empty){ console.log('Ya migrado, saltando'); return; }
-    console.log('Migrando ' + oldData.products.length + ' productos...');
+    if(!oldData.products || !oldData.products.length){ console.log('Doc legacy sin productos'); return; }
+    console.log('Migrando ' + oldData.products.length + ' productos desde doc legacy...');
+    // Get existing product IDs in new collection
+    var newColl = await db.collection('ferromax').doc('productos').collection('items').get();
+    var existingIds = new Set();
+    newColl.forEach(function(doc){ existingIds.add(doc.id); });
+    // Only migrate products not already in new collection
+    var toMigrate = oldData.products.filter(function(p){ return !existingIds.has(p.id); });
+    if(toMigrate.length === 0){ console.log('Todos los productos ya migrados'); return; }
+    console.log('Migrando ' + toMigrate.length + ' productos faltantes...');
+    // Batch write (max 500 per batch)
     var batch = db.batch();
-    oldData.products.forEach(function(p){
+    toMigrate.forEach(function(p){
       var ref = db.collection('ferromax').doc('productos').collection('items').doc(p.id);
       var data = JSON.parse(JSON.stringify(p));
       if((data.photo||'').length > 500000) data.photo = null;
@@ -4004,10 +4010,15 @@ async function fsMigrateInventario(){
       batch.set(db.collection('ferromax').doc('categorias'), {categories: oldData.categories});
     }
     await batch.commit();
-    products = oldData.products;
-    console.log('Migración completada ✓');
-    showToast('Inventario migrado a nueva estructura ✓');
-  }catch(e){ console.error('Error en migración:', e); }
+    // Reload all products
+    await fsLoadProductos();
+    iBuildCatSelects(); iApplyFilters(); iRefreshStats(); refreshPOSGrid();
+    console.log('Migración completada ✓ — ' + products.length + ' productos totales');
+    showToast('✓ ' + toMigrate.length + ' productos migrados correctamente');
+  }catch(e){
+    console.error('Error en migración:', e);
+    showToast('Error en migración: ' + e.message, 'err');
+  }
 }
 
 function fsSaveInventario(){
