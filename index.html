@@ -284,7 +284,7 @@ select.field-input{cursor:pointer;}
 .cat-chip{padding:4px 11px;border-radius:20px;font-family:var(--font-mono);font-size:10px;font-weight:600;letter-spacing:.5px;cursor:pointer;transition:all .15s;background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);}
 .cat-chip:hover{border-color:var(--accent);color:var(--accent);}
 .cat-chip.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
-.inv-body{flex:1;overflow-y:auto;padding:16px 20px;}
+.inv-body{flex:1;overflow-y:auto;padding:16px 20px;min-height:0;}
 .inv-stats-bar{display:flex;gap:12px;margin-bottom:14px;flex-shrink:0;}
 .inv-stat{display:flex;align-items:center;gap:7px;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);}
 .inv-stat b{color:var(--text-primary);}
@@ -582,7 +582,7 @@ textarea.fi2{resize:vertical;min-height:65px;font-family:var(--font-sans);font-s
               <th onclick="iSort('stock')" id="ith-stock">Stock</th>
               <th>Unidad</th>
               <th onclick="iSort('price')" id="ith-price">P. Venta</th>
-              <th onclick="iSort('cost')" id="ith-cost">P. Costo</th>
+              <th onclick="iSort('cost')" id="ith-cost" class="col-costo">P. Costo</th>
               <th title="Margen s/venta / Markup s/costo" class="col-margen">Margen / Markup</th>
               <th>Proveedor</th>
               <th style="width:74px"></th>
@@ -932,7 +932,7 @@ textarea.fi2{resize:vertical;min-height:65px;font-family:var(--font-sans);font-s
       <div class="fsec">
         <div class="fsec-title">Precios</div>
         <div class="fg3">
-          <div class="ff"><label>Precio de Costo <span>*</span></label><input class="fi2" id="fCost" type="number" step="0.01" min="0" placeholder="0.00" oninput="updateMargin()"></div>
+          <div class="ff" id="fCostWrapper"><label>Precio de Costo <span>*</span></label><input class="fi2" id="fCost" type="number" step="0.01" min="0" placeholder="0.00" oninput="updateMargin()"></div>
           <div class="ff"><label>Precio de Venta <span>*</span></label><input class="fi2" id="fPrice" type="number" step="0.01" min="0" placeholder="0.00" oninput="updateMargin()"></div>
           <div class="ff"><label>Margen / Markup</label><div class="fi2" id="fMargin" style="pointer-events:none;color:var(--text-muted);line-height:1.5;height:auto;min-height:38px">—</div></div>
         </div>
@@ -2601,7 +2601,7 @@ function iRender(list){
   if(iView==='table'){
     const tb=document.getElementById('iTableBody'),te=document.getElementById('iTableEmpty');
     if(!list.length){tb.innerHTML='';te.style.display='flex';}
-    else{te.style.display='none';tb.innerHTML=list.map(p=>`<tr onclick="iOpenDetail('${p.id}')"><td>${iPhotoEl(p,34)}</td><td><div style="font-weight:600;font-size:13px">${p.name}</div>${p.desc?`<div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted)">${p.desc.substring(0,40)}${p.desc.length>40?'...':''}</div>`:''}</td><td style="font-family:var(--font-mono);font-size:11px">${p.sku}</td><td style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary)">${p.barcode||'—'}</td><td><span class="badge badge-gray">${p.category||'—'}</span></td><td>${iStockBar(p)}</td><td style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)">${p.unit||'pieza'}</td><td style="font-family:var(--font-mono);font-size:11px;color:var(--accent)">$${(+p.price||0).toLocaleString('es-MX',{minimumFractionDigits:2})}</td><td style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)">$${(+p.cost||0).toLocaleString('es-MX',{minimumFractionDigits:2})}</td>${currentUser&&currentUser.role==='admin'?`<td style="font-family:var(--font-mono);font-size:11px;color:${iMarginColor(p)}">${iMargin(p)}</td>`:`<td></td>`}<td style="font-size:12px;color:var(--text-secondary)">${p.supplier||'—'}</td><td onclick="event.stopPropagation()"><div class="row-acts"><div class="btn-icon btn-sm" onclick="openProdModal(event,'${p.id}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><div class="btn-icon btn-sm" style="color:var(--red)" onclick="iAskDel('${p.id}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></div></div></td></tr>`).join('');}
+    else{te.style.display='none';tb.innerHTML=list.map(p=>`<tr onclick="iOpenDetail('${p.id}')"><td>${iPhotoEl(p,34)}</td><td><div style="font-weight:600;font-size:13px">${p.name}</div>${p.desc?`<div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted)">${p.desc.substring(0,40)}${p.desc.length>40?'...':''}</div>`:''}</td><td style="font-family:var(--font-mono);font-size:11px">${p.sku}</td><td style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary)">${p.barcode||'—'}</td><td><span class="badge badge-gray">${p.category||'—'}</span></td><td>${iStockBar(p)}</td><td style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)">${p.unit||'pieza'}</td><td style="font-family:var(--font-mono);font-size:11px;color:var(--accent)">$${(+p.price||0).toLocaleString('es-MX',{minimumFractionDigits:2})}</td>${currentUser&&currentUser.role==='admin'?`<td class="col-costo" style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)">$${(+p.cost||0).toLocaleString('es-MX',{minimumFractionDigits:2})}</td>`:`<td class="col-costo"></td>`}${currentUser&&currentUser.role==='admin'?`<td style="font-family:var(--font-mono);font-size:11px;color:${iMarginColor(p)}">${iMargin(p)}</td>`:`<td></td>`}<td style="font-size:12px;color:var(--text-secondary)">${p.supplier||'—'}</td><td onclick="event.stopPropagation()"><div class="row-acts"><div class="btn-icon btn-sm" onclick="openProdModal(event,'${p.id}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><div class="btn-icon btn-sm" style="color:var(--red)" onclick="iAskDel('${p.id}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></div></div></td></tr>`).join('');}
   }
   // grid
   if(iView==='grid'){
@@ -4500,6 +4500,8 @@ document.addEventListener('click', function(e){
 body.rol-vendedor .col-margen, body.rol-repartidor .col-margen { display:none !important; }
 body.rol-vendedor #fMargin, body.rol-repartidor #fMargin { display:none !important; }
 body.rol-vendedor #fMinPriceSection, body.rol-repartidor #fMinPriceSection { display:none !important; }
+body.rol-vendedor .col-costo, body.rol-repartidor .col-costo { display:none !important; }
+body.rol-vendedor #fCostWrapper, body.rol-repartidor #fCostWrapper { display:none !important; }
 .ruta-line-item{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
 .ruta-line-item select,.ruta-line-item input{flex:1;}
 .pedido-line{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;}
@@ -4914,6 +4916,8 @@ body.rol-vendedor #fMinPriceSection, body.rol-repartidor #fMinPriceSection { dis
 body.rol-vendedor .col-margen, body.rol-repartidor .col-margen { display:none !important; }
 body.rol-vendedor #fMargin, body.rol-repartidor #fMargin { display:none !important; }
 body.rol-vendedor #fMinPriceSection, body.rol-repartidor #fMinPriceSection { display:none !important; }
+body.rol-vendedor .col-costo, body.rol-repartidor .col-costo { display:none !important; }
+body.rol-vendedor #fCostWrapper, body.rol-repartidor #fCostWrapper { display:none !important; }
 </style>
 
 
