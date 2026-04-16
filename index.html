@@ -90,7 +90,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
 .user-switch-hint{font-family:var(--font-mono);font-size:9px;color:var(--text-muted);margin-top:4px;letter-spacing:.5px;text-align:center;}
 
 /* ── MAIN ────────────────────────────────────────────── */
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;height:100vh;}
 .header{height:var(--header-h);background:var(--bg-panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;flex-shrink:0;}
 .header-title{font-family:var(--font-cond);font-size:20px;font-weight:700;letter-spacing:1px;margin-right:auto;}
 .header-search{display:flex;align-items:center;gap:8px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:6px 12px;width:240px;transition:border-color .2s;}
@@ -105,10 +105,10 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
 .clock-time{font-size:14px;font-weight:600;color:var(--accent);}
 
 /* ── CONTENT ─────────────────────────────────────────── */
-.content{flex:1;overflow-y:auto;padding:24px;display:none;animation:fadeIn .2s ease;}
+.content{flex:1;overflow-y:auto;padding:24px;display:none;animation:fadeIn .2s ease;min-height:0;}
 .content.active{display:block;}.content.inv-content.active,.content#mod-logistica.active{display:flex!important;}
 /* Inventory module needs different overflow behaviour */
-.content.inv-content{padding:0;overflow:hidden;display:none;flex-direction:column;}
+.content.inv-content{padding:0;overflow:hidden;display:none;flex-direction:column;height:100%;}
 .content.inv-content.active{display:flex;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
