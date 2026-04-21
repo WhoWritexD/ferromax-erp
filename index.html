@@ -199,7 +199,7 @@ select.field-input{cursor:pointer;}
 .pos-product-name{font-size:11px;font-weight:600;line-height:1.3;}
 .pos-product-price{font-family:var(--font-mono);font-size:12px;color:var(--accent);}
 .pos-product-stock{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);}
-.ticket-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+.ticket-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);display:flex;flex-direction:column;overflow:hidden;min-height:0;align-self:start;position:sticky;top:0;max-height:calc(100vh - var(--header-h) - 32px);}
 .ticket-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
 .ticket-items{flex:1;overflow-y:auto;padding:12px;}
 .ticket-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius);background:var(--bg-panel);margin-bottom:6px;}
@@ -1567,8 +1567,8 @@ function renderTicket(){
     <div class="ticket-item">
       <span style="font-size:18px">${i.photo?`<img src="${i.photo}" style="width:24px;height:24px;object-fit:cover;border-radius:3px">`:i.icon}</span>
       <div class="ticket-item-name">
-        ${i.name}
-        ${i._promoApplied?'<span style="font-family:var(--font-mono);font-size:9px;color:var(--green);margin-left:4px">🏷 PROMO</span>':''}
+        <div>${i.name}${i._promoApplied?'<span style="font-family:var(--font-mono);font-size:9px;color:var(--green);margin-left:4px">🏷 PROMO</span>':''}</div>
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted)">${i.sku}</div>
       </div>
       <input type="number" class="ticket-item-qty" value="${i.qty}" min="1" max="${+i.stock||999}"
         onchange="cambiarQtyTicket('${i.sku}',this)"
@@ -1577,6 +1577,8 @@ function renderTicket(){
       <span class="ticket-item-price">$${(i.price*i.qty).toLocaleString('es-MX',{minimumFractionDigits:2})}</span>
       <span class="ticket-item-del" onclick="removeFromTicket('${i.sku}')">✕</span>
     </div>`).join('');
+  // Scroll to bottom so last added item is visible
+  setTimeout(function(){ list.scrollTop = list.scrollHeight; }, 30);
   const sub=ticketItems.reduce((a,i)=>a+i.price*i.qty,0);
   // Descuento 5% sobre el subtotal (antes de IVA)
   const descMonto=_descuento5?sub*0.05:0;
@@ -3690,7 +3692,7 @@ async function fsLoadAll(){
     if(tickDoc.exists){
       const d = tickDoc.data();
       salesLog      = d.salesLog      || [];
-      ticketCounter = d.ticketCounter || 1;
+      ticketCounter = Math.max(ticketCounter, d.ticketCounter || 1);
     } else {
       const stored = JSON.parse(localStorage.getItem('fm_tickets')||'[]');
       stored.forEach(t=>salesLog.push(t));
@@ -3769,7 +3771,12 @@ function fsStartListeners(){
       var d = snap.data();
       var existing = new Set(salesLog.map(function(t){ return t.num; }));
       (d.salesLog||[]).forEach(function(t){ if(!existing.has(t.num)) salesLog.push(t); });
-      if((d.ticketCounter||1) > ticketCounter) ticketCounter = d.ticketCounter;
+      if((d.ticketCounter||1) > ticketCounter){
+      ticketCounter = d.ticketCounter;
+      // Update displayed ticket number
+      var tn = document.getElementById('ticketNum');
+      if(tn) tn.textContent = 'Ticket #' + ticketCounter;
+    }
     },
     function(e){ console.error('listener tickets:', e); }
   ));
