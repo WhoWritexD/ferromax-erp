@@ -106,7 +106,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
 
 /* ── CONTENT ─────────────────────────────────────────── */
 .content{flex:1;overflow-y:auto;padding:24px;display:none;animation:fadeIn .2s ease;min-height:0;}
-.content.active{display:block;}.content.inv-content.active,.content#mod-logistica.active{display:flex!important;}.content#mod-pos.active{display:flex!important;flex-direction:column;padding:0;overflow:hidden;}
+.content.active{display:block;}.content.inv-content.active,.content#mod-logistica.active{display:flex!important;}.content#mod-pos.active{display:flex!important;flex-direction:column!important;padding:0!important;overflow:hidden!important;}
 /* Inventory module needs different overflow behaviour */
 .content.inv-content{padding:0;overflow:hidden;display:none;flex-direction:column;height:100%;}
 .content.inv-content.active{display:flex;}
@@ -187,7 +187,7 @@ select.field-input{cursor:pointer;}
 .tabs{display:flex;gap:2px;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:3px;margin-bottom:16px;width:fit-content;;flex-shrink:0}
 .tab{padding:6px 14px;border-radius:5px;font-size:12px;font-weight:500;cursor:pointer;color:var(--text-muted);transition:all .15s;}
 .tab.active{background:var(--bg-card);color:var(--text-primary);}
-.pos-layout{display:grid;grid-template-columns:1fr 380px;gap:16px;overflow:hidden;padding:16px;flex:1;min-height:0;}
+.pos-layout{display:grid;grid-template-columns:1fr 380px;gap:16px;overflow:hidden;padding:16px;flex:1;min-height:0;height:100%;}
 .pos-search-area{display:flex;flex-direction:column;gap:16px;min-height:0;overflow:hidden;height:100%;}
 .pos-big-search{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;}
 .pos-big-input{width:100%;background:var(--bg-panel);border:2px solid var(--accent);border-radius:var(--radius);padding:14px 18px;color:var(--text-primary);font-family:var(--font-mono);font-size:16px;outline:none;}
@@ -1373,8 +1373,13 @@ function showModule(id,el){
   if(id==='usuarios')renderUsersTable();
   if(id==='inventario'){iRefreshStats();iApplyFilters();setTimeout(function(){const s=document.getElementById('iSearch');if(s)s.focus();},80);if(currentUser?.role!=='admin')setTimeout(renderRutaInventarioPanel,100);}
   if(id==='pos'){
+    // Set explicit height so layout fills screen correctly
+    requestAnimationFrame(function(){
+      var modEl = document.getElementById('mod-pos');
+      var h = window.innerHeight - (document.getElementById('appHeader') ? document.getElementById('appHeader').offsetHeight : 56);
+      if(modEl) modEl.style.height = h + 'px';
+    });
     if((!products || products.length===0) && db){
-      // Firebase no ha cargado aún — forzar carga
       fsLoadProductos().then(function(){ refreshPOSGrid(); })
         .catch(function(){ refreshPOSGrid(); });
     } else {
@@ -4464,8 +4469,8 @@ document.addEventListener('click', function(e){
   /* ── ROOT OVERFLOW FIX FOR POS ON MOBILE ── */
   body { overflow: auto !important; height: auto !important; min-height: 100vh; }
   .main { overflow: visible !important; height: auto !important; }
-  #mod-pos.active { overflow-y: auto !important; height: auto !important; padding-bottom: 24px; }
-  #posTabVenta { display: flex; flex-direction: column; gap: 0; }
+  #mod-pos.active { overflow: hidden !important; padding: 0 !important; display: flex !important; flex-direction: column !important; }
+  #posTabVenta { display: flex !important; flex-direction: column !important; flex: 1; min-height: 0; }
   #posProductsPanel { flex: none !important; overflow: hidden !important; height: auto !important; max-height: 45vh !important; }
   #posProductsPanel > div { overflow-y: auto !important; max-height: calc(45vh - 48px) !important; min-height: 120px; }
   .ticket-panel { overflow: visible !important; height: auto !important; }
