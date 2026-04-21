@@ -187,7 +187,7 @@ select.field-input{cursor:pointer;}
 .tabs{display:flex;gap:2px;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:3px;margin-bottom:16px;width:fit-content;}
 .tab{padding:6px 14px;border-radius:5px;font-size:12px;font-weight:500;cursor:pointer;color:var(--text-muted);transition:all .15s;}
 .tab.active{background:var(--bg-card);color:var(--text-primary);}
-.pos-layout{display:grid;grid-template-columns:1fr 380px;gap:16px;height:calc(100vh - var(--header-h) - 48px);}
+.pos-layout{display:grid;grid-template-columns:1fr 380px;gap:16px;height:calc(100vh - var(--header-h) - 48px);overflow:hidden;}
 .pos-search-area{display:flex;flex-direction:column;gap:16px;}
 .pos-big-search{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;}
 .pos-big-input{width:100%;background:var(--bg-panel);border:2px solid var(--accent);border-radius:var(--radius);padding:14px 18px;color:var(--text-primary);font-family:var(--font-mono);font-size:16px;outline:none;}
@@ -199,12 +199,12 @@ select.field-input{cursor:pointer;}
 .pos-product-name{font-size:11px;font-weight:600;line-height:1.3;}
 .pos-product-price{font-family:var(--font-mono);font-size:12px;color:var(--accent);}
 .pos-product-stock{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);}
-.ticket-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);display:flex;flex-direction:column;overflow:hidden;}
+.ticket-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);display:flex;flex-direction:column;overflow:hidden;position:sticky;top:0;height:100%;}
 .ticket-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
 .ticket-items{flex:1;overflow-y:auto;padding:12px;}
 .ticket-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius);background:var(--bg-panel);margin-bottom:6px;}
 .ticket-item-name{flex:1;font-size:12px;font-weight:500;}
-.ticket-item-qty{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-family:var(--font-mono);font-size:11px;min-width:24px;text-align:center;}
+.ticket-item-qty{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-family:var(--font-mono);font-size:11px;min-width:36px;max-width:52px;text-align:center;color:var(--text-primary);-moz-appearance:textfield;}
 .ticket-item-price{font-family:var(--font-mono);font-size:12px;color:var(--accent);min-width:70px;text-align:right;}
 .ticket-item-del{cursor:pointer;color:var(--text-muted);font-size:14px;}
 .ticket-item-del:hover{color:var(--red);}
@@ -1430,6 +1430,7 @@ function renderPOS(){
       ${badge}
       <div class="pos-product-icon">${p.photo?`<img src="${p.photo}" style="width:32px;height:32px;object-fit:cover;border-radius:4px">`:p.icon}</div>
       <div class="pos-product-name">${p.name}</div>
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);margin-top:-2px">${p.sku}</div>
       <div class="pos-product-price">$${p.price.toLocaleString()}</div>
       <div class="pos-product-stock" style="color:${stockColor}">${stockText}</div>
     </div>`;
@@ -1488,6 +1489,19 @@ function addToTicket(sku){
   }
   renderTicket();
 }
+function cambiarQtyTicket(sku, input){
+  var val = parseInt(input.value);
+  if(isNaN(val) || val < 1){ val = 1; input.value = 1; }
+  var maxStock = +((products.find(function(p){ return p.sku===sku; })||{}).stock || 999);
+  if(val > maxStock){ val = maxStock; input.value = maxStock; showToast('Máximo stock: '+maxStock,'err'); }
+  var item = ticketItems.find(function(i){ return i.sku===sku; });
+  if(!item) return;
+  item.qty = val;
+  checkPromoPrice(item);
+  renderTicket();
+  renderPOS();
+}
+
 function removeFromTicket(sku){ticketItems=ticketItems.filter(i=>i.sku!==sku);renderTicket();renderPOS();}
 function getIvaActivo(){
   // Lee el estado del toggle directamente del DOM — fuente única de verdad
@@ -1551,7 +1565,10 @@ function renderTicket(){
         ${i.name}
         ${i._promoApplied?'<span style="font-family:var(--font-mono);font-size:9px;color:var(--green);margin-left:4px">🏷 PROMO</span>':''}
       </div>
-      <span class="ticket-item-qty">${i.qty}</span>
+      <input type="number" class="ticket-item-qty" value="${i.qty}" min="1" max="${+i.stock||999}"
+        onchange="cambiarQtyTicket('${i.sku}',this)"
+        onclick="this.select()"
+        style="width:48px">
       <span class="ticket-item-price">$${(i.price*i.qty).toLocaleString('es-MX',{minimumFractionDigits:2})}</span>
       <span class="ticket-item-del" onclick="removeFromTicket('${i.sku}')">✕</span>
     </div>`).join('');
