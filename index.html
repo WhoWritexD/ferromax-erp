@@ -184,11 +184,11 @@ select.field-input{cursor:pointer;}
 .search-wrap:focus-within{border-color:var(--accent);}
 .search-wrap input{background:none;border:none;outline:none;color:var(--text-primary);font-family:var(--font-mono);font-size:13px;flex:1;}
 .search-wrap input::placeholder{color:var(--text-muted);}
-.tabs{display:flex;gap:2px;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:3px;margin-bottom:16px;width:fit-content;}
+.tabs{display:flex;gap:2px;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:3px;margin-bottom:16px;width:fit-content;;flex-shrink:0}
 .tab{padding:6px 14px;border-radius:5px;font-size:12px;font-weight:500;cursor:pointer;color:var(--text-muted);transition:all .15s;}
 .tab.active{background:var(--bg-card);color:var(--text-primary);}
-.pos-layout{display:grid;grid-template-columns:1fr 380px;gap:16px;height:calc(100vh - var(--header-h) - 48px);overflow:hidden;}
-.pos-search-area{display:flex;flex-direction:column;gap:16px;}
+.pos-layout{display:grid;grid-template-columns:1fr 380px;gap:16px;flex:1;overflow:hidden;padding:16px;}
+.pos-search-area{display:flex;flex-direction:column;gap:16px;min-height:0;overflow:hidden;}
 .pos-big-search{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;}
 .pos-big-input{width:100%;background:var(--bg-panel);border:2px solid var(--accent);border-radius:var(--radius);padding:14px 18px;color:var(--text-primary);font-family:var(--font-mono);font-size:16px;outline:none;}
 .pos-big-input::placeholder{color:var(--text-muted);font-size:13px;}
@@ -610,13 +610,13 @@ textarea.fi2{resize:vertical;min-height:65px;font-family:var(--font-sans);font-s
   </div>
 
   <!-- POS -->
-  <div class="content" id="mod-pos">
+  <div class="content" id="mod-pos" style="padding:0;overflow:hidden;display:flex;flex-direction:column;">
     <div class="tabs">
       <div class="tab active" onclick="switchPOSTab('venta',this)">Nueva Venta</div>
       <div class="tab" onclick="switchPOSTab('historial',this)">Historial del Día</div>
       <div class="tab" onclick="switchPOSTab('corte',this)">Corte de Caja</div>
     </div>
-    <div id="posTabVenta">
+    <div id="posTabVenta" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
       <div class="pos-layout">
         <div class="pos-search-area">
           <div class="pos-big-search">
