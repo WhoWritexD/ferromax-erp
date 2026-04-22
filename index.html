@@ -106,7 +106,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
 
 /* ── CONTENT ─────────────────────────────────────────── */
 .content{flex:1;overflow-y:auto;padding:24px;display:none;animation:fadeIn .2s ease;min-height:0;}
-.content.active{display:block;}.content.inv-content.active,.content#mod-logistica.active{display:flex!important;}.content#mod-pos.active{display:flex!important;flex-direction:column!important;padding:0!important;overflow:hidden!important;}
+.content.active{display:block;}.content.inv-content.active,.content#mod-logistica.active{display:flex!important;}.content#mod-pos.active{display:flex!important;flex-direction:column!important;padding:0!important;overflow:hidden!important;}.content#mod-cotizacion.active{display:flex!important;flex-direction:column!important;padding:0!important;overflow:hidden!important;}
 /* Inventory module needs different overflow behaviour */
 .content.inv-content{padding:0;overflow:hidden;display:none;flex-direction:column;height:100%;}
 .content.inv-content.active{display:flex;}
@@ -446,6 +446,10 @@ textarea.fi2{resize:vertical;min-height:65px;font-family:var(--font-sans);font-s
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
       <span class="nav-label">Punto de Venta</span>
     </div>
+    <div class="nav-item" id="nav-cotizacion" onclick="showModule('cotizacion',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+      <span class="nav-label">Cotizaciones</span>
+    </div>
     <div class="nav-item" id="nav-logistica" onclick="showModule('logistica',this)">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="3" width="15" height="13" rx="1"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
       <span class="nav-label">Logística</span>
@@ -714,6 +718,65 @@ textarea.fi2{resize:vertical;min-height:65px;font-family:var(--font-sans);font-s
   </div>
 
   <!-- LOGÍSTICA -->
+  <!-- ══ COTIZACIONES ══════════════════════════════════════════════ -->
+  <div class="content" id="mod-cotizacion" style="padding:0;overflow:hidden;">
+    <div style="flex-shrink:0;padding:10px 16px;background:var(--bg-panel);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);letter-spacing:1px">COTIZACIÓN</span>
+        <span id="cotNumLabel" style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent)">#1</span>
+        <span id="cotFechaLabel" style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted)"></span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="cotClearItems()">✕ Limpiar</button>
+        <button class="btn btn-ghost btn-sm" onclick="cotImprimirTicket()">🖨 Imprimir cotización</button>
+        <button class="btn btn-green btn-sm" onclick="cotPasarAlPOS()" id="cotPasarBtn" style="display:none">💵 Concretar venta →</button>
+      </div>
+    </div>
+    <div class="pos-layout" id="cotLayout">
+      <!-- Left: search + products -->
+      <div class="pos-search-area">
+        <div class="pos-big-search">
+          <div class="flex-between" style="margin-bottom:8px">
+            <span class="field-label">Buscar Producto</span>
+            <span class="text-muted text-sm text-mono" id="cotResultCount"></span>
+          </div>
+          <input class="pos-big-input" id="cotSearch" placeholder="Nombre, SKU o código de barras..." oninput="cotFilter()">
+        </div>
+        <div class="panel" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;">
+          <div class="panel-header"><span class="panel-title">Productos</span></div>
+          <div style="padding:14px;overflow-y:auto;flex:1"><div class="pos-products-grid" id="cotGrid"></div></div>
+        </div>
+      </div>
+      <!-- Right: cotizacion ticket -->
+      <div class="ticket-panel">
+        <div class="ticket-header">
+          <div><div class="panel-title">Lista de Cotización</div><div class="text-muted text-sm text-mono" id="cotItemCount">0 productos</div></div>
+        </div>
+        <div id="cotEmpty" class="empty-ticket"><div class="empty-ticket-icon">📋</div><div class="empty-ticket-text">Agrega productos para cotizar</div></div>
+        <div class="ticket-items" id="cotItems" style="display:none"></div>
+        <div class="ticket-client-info">
+          <div class="field-group">
+            <label class="field-label">Cliente / Razón Social (opcional)</label>
+            <input class="field-input" id="cotCliente" placeholder="Nombre del cliente..." style="font-size:12px;width:100%">
+          </div>
+          <div class="field-group" style="margin-top:6px">
+            <label class="field-label">Notas (opcional)</label>
+            <input class="field-input" id="cotNotas" placeholder="Observaciones, tiempo de entrega..." style="font-size:12px;width:100%">
+          </div>
+        </div>
+        <div class="ticket-totals">
+          <div class="ticket-row"><span class="text-muted">Subtotal</span><span class="text-mono" id="cotSubtotal">$0.00</span></div>
+          <div class="ticket-row" style="font-size:15px;font-weight:700;border-top:1px solid var(--border);padding-top:8px;margin-top:4px">
+            <span>Total</span><span class="text-mono" style="color:var(--accent)" id="cotTotal">$0.00</span>
+          </div>
+          <div style="margin-top:8px;font-family:var(--font-mono);font-size:9px;color:var(--text-muted);text-align:center">
+            Cotización válida por 7 días · Precios sujetos a cambio
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="content" id="mod-logistica" style="padding:0;overflow:hidden;display:none;flex-direction:column">
 
     <!-- TOP BAR -->
@@ -1038,7 +1101,7 @@ const USERS=[
   {id:'admin1',name:'Administrador',initials:'AD',role:'admin',pass:'admin123',color:'#f59e0b',bg:'rgba(245,158,11,.15)',sales:0,tickets:0,turns:[]},
 ];
 const ROLES={admin:'Admin',vendedor:'Vendedor',repartidor:'Repartidor'};
-const ROLE_MODS={admin:['dashboard','inventario','pos','logistica','contactos','datos','bitacora','usuarios'],vendedor:['dashboard','inventario','pos','contactos'],repartidor:['dashboard','inventario','pos','contactos']};
+const ROLE_MODS={admin:['dashboard','inventario','pos','cotizacion','logistica','contactos','datos','bitacora','usuarios'],vendedor:['dashboard','inventario','pos','cotizacion','contactos'],repartidor:['dashboard','inventario','pos','contactos']};
 let currentUser=null,selectedLoginUser=null,activityLog=[],salesLog=[],ticketCounter=1;
 // ══ ADMIN AUTH ════════════════════════════════════════════
 let invPermission = false;
@@ -1362,7 +1425,7 @@ function loadUsers(){
 }
 
 // ══ NAV ══════════════════════════════════════════════════
-const MOD_TITLES={dashboard:'Dashboard Operativo',inventario:'Inventario',pos:'Punto de Venta',logistica:'Logística',contactos:'Contactos',datos:'Datos del Sistema',bitacora:'Bitácora',usuarios:'Gestión de Usuarios'};
+const MOD_TITLES={dashboard:'Dashboard Operativo',inventario:'Inventario',pos:'Punto de Venta',cotizacion:'Cotizaciones',logistica:'Logística',contactos:'Contactos',datos:'Datos del Sistema',bitacora:'Bitácora',usuarios:'Gestión de Usuarios'};
 function showModule(id,el){
   document.querySelectorAll('.content').forEach(c=>c.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -1372,6 +1435,7 @@ function showModule(id,el){
   if(id==='bitacora')renderLog();
   if(id==='usuarios')renderUsersTable();
   if(id==='inventario'){iRefreshStats();iApplyFilters();setTimeout(function(){const s=document.getElementById('iSearch');if(s)s.focus();},80);if(currentUser?.role!=='admin')setTimeout(renderRutaInventarioPanel,100);}
+  if(id==='cotizacion'){ cotInit(); cotFilter(); }
   if(id==='pos'){
     // Set explicit height so layout fills screen correctly
     requestAnimationFrame(function(){
@@ -3930,6 +3994,233 @@ let _fsDebounce = {};
 function fsDebounced(key, fn, delay){
   clearTimeout(_fsDebounce[key]);
   _fsDebounce[key] = setTimeout(fn, delay||800);
+}
+
+// ══ COTIZACIONES ══════════════════════════════════════════════════════════════
+let cotItems = [];
+let cotFiltered = [];
+let cotCounter = 1;
+let cotHistorial = [];
+
+function cotInit(){
+  // Set date and number
+  const now = new Date();
+  const el = document.getElementById('cotFechaLabel');
+  if(el) el.textContent = now.toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short'}) + ' · ' + now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  const nl = document.getElementById('cotNumLabel');
+  if(nl) nl.textContent = '#' + cotCounter;
+  cotFiltered = [...getPOSProducts()];
+  cotRenderGrid();
+  cotRenderItems();
+  // Set POS-like height
+  requestAnimationFrame(function(){
+    var modEl = document.getElementById('mod-cotizacion');
+    var h = window.innerHeight - (document.getElementById('appHeader') ? document.getElementById('appHeader').offsetHeight : 56);
+    if(modEl) modEl.style.height = h + 'px';
+  });
+}
+
+function cotFilter(){
+  const q = (document.getElementById('cotSearch')||{}).value || '';
+  const ql = q.toLowerCase();
+  cotFiltered = getPOSProducts().filter(p => !ql || p.name.toLowerCase().includes(ql) || p.sku.toLowerCase().includes(ql));
+  document.getElementById('cotResultCount').textContent = cotFiltered.length + ' disponibles';
+  cotRenderGrid();
+}
+
+function cotRenderGrid(){
+  const grid = document.getElementById('cotGrid');
+  if(!grid) return;
+  if(!cotFiltered.length){
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--text-muted)"><div style="font-size:40px;opacity:.3;margin-bottom:12px">📦</div><div style="font-family:var(--font-mono);font-size:11px">Sin productos</div></div>';
+    return;
+  }
+  grid.innerHTML = cotFiltered.map(p => {
+    const enCot = (cotItems.find(i=>i.sku===p.sku)||{qty:0}).qty;
+    const badge = enCot > 0 ? '<span style="position:absolute;top:4px;right:4px;background:var(--accent);color:#000;font-family:var(--font-mono);font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px">'+enCot+'</span>' : '';
+    return '<div class="pos-product-card" onclick="cotAddItem(\''+p.sku+'\')" style="position:relative;cursor:pointer">'+badge+
+      '<div class="pos-product-icon">'+(p.photo?'<img src="'+p.photo+'" style="width:32px;height:32px;object-fit:cover;border-radius:4px">':p.icon||'📦')+'</div>'+
+      '<div class="pos-product-name">'+p.name+'</div>'+
+      '<div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);margin-top:-2px">'+p.sku+'</div>'+
+      '<div class="pos-product-price">$'+p.price.toLocaleString('es-MX',{minimumFractionDigits:2})+'</div>'+
+      '</div>';
+  }).join('');
+}
+
+function cotAddItem(sku){
+  const p = products.find(x => x.sku === sku);
+  if(!p) return;
+  const ex = cotItems.find(i => i.sku === sku);
+  if(ex){ ex.qty++; }
+  else { cotItems.push({...p, qty:1}); }
+  cotRenderItems();
+  cotRenderGrid();
+}
+
+function cotCambiarQty(sku, input){
+  var val = parseInt(input.value);
+  if(isNaN(val)||val<1){ val=1; input.value=1; }
+  var item = cotItems.find(i=>i.sku===sku);
+  if(!item) return;
+  item.qty = val;
+  cotRenderItems();
+  cotRenderGrid();
+}
+
+function cotRemoveItem(sku){
+  cotItems = cotItems.filter(i=>i.sku!==sku);
+  cotRenderItems();
+  cotRenderGrid();
+}
+
+function cotRenderItems(){
+  const empty = document.getElementById('cotEmpty');
+  const list  = document.getElementById('cotItems');
+  const cnt   = document.getElementById('cotItemCount');
+  const pasarBtn = document.getElementById('cotPasarBtn');
+  if(!cotItems.length){
+    if(empty) empty.style.display='flex';
+    if(list)  list.style.display='none';
+    if(cnt)   cnt.textContent='0 productos';
+    if(pasarBtn) pasarBtn.style.display='none';
+    ['cotSubtotal','cotTotal'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='$0.00';});
+    return;
+  }
+  if(empty) empty.style.display='none';
+  if(list)  list.style.display='block';
+  if(cnt)   cnt.textContent = cotItems.length + ' producto' + (cotItems.length!==1?'s':'');
+  if(pasarBtn) pasarBtn.style.display='flex';
+
+  list.innerHTML = cotItems.map(i=>`
+    <div class="ticket-item">
+      <span style="font-size:18px">${i.photo?'<img src="'+i.photo+'" style="width:24px;height:24px;object-fit:cover;border-radius:3px">':i.icon||'📦'}</span>
+      <div class="ticket-item-name">
+        <div>${i.name}</div>
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted)">${i.sku}</div>
+      </div>
+      <input type="number" class="ticket-item-qty" value="${i.qty}" min="1"
+        onchange="cotCambiarQty('${i.sku}',this)" onclick="this.select()" style="width:48px">
+      <span class="ticket-item-price">$${(i.price*i.qty).toLocaleString('es-MX',{minimumFractionDigits:2})}</span>
+      <span class="ticket-item-del" onclick="cotRemoveItem('${i.sku}')">✕</span>
+    </div>`).join('');
+
+  setTimeout(function(){ if(list) list.scrollTop = list.scrollHeight; }, 30);
+
+  const sub = cotItems.reduce((a,i)=>a+i.price*i.qty, 0);
+  document.getElementById('cotSubtotal').textContent = '$'+sub.toLocaleString('es-MX',{minimumFractionDigits:2});
+  document.getElementById('cotTotal').textContent    = '$'+sub.toLocaleString('es-MX',{minimumFractionDigits:2});
+}
+
+function cotClearItems(){
+  cotItems = [];
+  if(document.getElementById('cotSearch')) document.getElementById('cotSearch').value='';
+  if(document.getElementById('cotCliente')) document.getElementById('cotCliente').value='';
+  if(document.getElementById('cotNotas')) document.getElementById('cotNotas').value='';
+  cotFiltered = [...getPOSProducts()];
+  cotRenderGrid();
+  cotRenderItems();
+}
+
+function cotImprimirTicket(){
+  if(!cotItems.length){ showToast('Agrega productos a la cotización','err'); return; }
+  const empresa   = (typeof configFiscal!=='undefined'&&configFiscal.razon)||'FerroMax';
+  const cliente   = (document.getElementById('cotCliente')||{}).value || '';
+  const notas     = (document.getElementById('cotNotas')||{}).value || '';
+  const fecha     = new Date().toLocaleDateString('es-MX',{year:'numeric',month:'long',day:'numeric'});
+  const hora      = new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  const sub       = cotItems.reduce((a,i)=>a+i.price*i.qty,0);
+  const numCot    = '#COT-' + String(cotCounter).padStart(4,'0');
+
+  const rows = cotItems.map(i=>`
+    <tr>
+      <td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;font-size:12px">${i.name}<br><span style="font-family:monospace;font-size:10px;color:#94a3b8">${i.sku}</span></td>
+      <td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;text-align:center;font-family:monospace;font-size:12px">${i.qty}</td>
+      <td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;text-align:right;font-family:monospace;font-size:12px">$${i.price.toLocaleString('es-MX',{minimumFractionDigits:2})}</td>
+      <td style="padding:7px 8px;border-bottom:1px solid #e2e8f0;text-align:right;font-family:monospace;font-size:12px;font-weight:700">$${(i.price*i.qty).toLocaleString('es-MX',{minimumFractionDigits:2})}</td>
+    </tr>`).join('');
+
+  // Guardar en historial
+  cotGuardarHistorial(numCot, sub);
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cotización ${numCot}</title>
+  <style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:sans-serif;color:#0f172a;padding:32px;max-width:680px;margin:0 auto;}
+  @media print{body{padding:16px;}button{display:none!important;}@page{margin:1.5cm;}}</style></head><body>
+  <!-- Header -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #f59e0b">
+    <div>
+      <div style="font-size:28px;font-weight:800;letter-spacing:1px">${empresa}</div>
+      <div style="font-size:11px;color:#64748b;letter-spacing:2px;text-transform:uppercase;margin-top:2px">Cotización de Productos</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:18px;font-weight:800;color:#f59e0b">${numCot}</div>
+      <div style="font-size:11px;color:#64748b">${fecha} · ${hora}</div>
+      ${cliente?'<div style="font-size:11px;margin-top:4px"><strong>Cliente:</strong> '+cliente+'</div>':''}
+    </div>
+  </div>
+  <!-- Table -->
+  <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+    <thead>
+      <tr style="background:#f8fafc">
+        <th style="padding:8px;text-align:left;font-size:11px;color:#64748b;letter-spacing:1px;text-transform:uppercase;border-bottom:2px solid #e2e8f0">Producto</th>
+        <th style="padding:8px;text-align:center;font-size:11px;color:#64748b;letter-spacing:1px;text-transform:uppercase;border-bottom:2px solid #e2e8f0">Cant.</th>
+        <th style="padding:8px;text-align:right;font-size:11px;color:#64748b;letter-spacing:1px;text-transform:uppercase;border-bottom:2px solid #e2e8f0">P. Unit.</th>
+        <th style="padding:8px;text-align:right;font-size:11px;color:#64748b;letter-spacing:1px;text-transform:uppercase;border-bottom:2px solid #e2e8f0">Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <!-- Total -->
+  <div style="display:flex;justify-content:flex-end;margin-bottom:20px">
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 20px;min-width:200px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px;color:#64748b"><span>Subtotal</span><span style="font-family:monospace">$${sub.toLocaleString('es-MX',{minimumFractionDigits:2})}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:800;border-top:1px solid #e2e8f0;padding-top:8px"><span>Total</span><span style="font-family:monospace;color:#f59e0b">$${sub.toLocaleString('es-MX',{minimumFractionDigits:2})}</span></div>
+    </div>
+  </div>
+  ${notas?'<div style="background:#fef9c3;border:1px solid #fde68a;border-radius:6px;padding:10px 14px;font-size:12px;margin-bottom:16px"><strong>Notas:</strong> '+notas+'</div>':''}
+  <!-- Footer -->
+  <div style="text-align:center;font-size:10px;color:#94a3b8;border-top:1px dashed #e2e8f0;padding-top:12px">
+    Cotización válida por 7 días · Precios en MXN sujetos a cambio sin previo aviso
+  </div>
+  <div style="text-align:center;margin-top:12px">
+    <button onclick="window.print()" style="background:#f59e0b;color:#000;border:none;padding:8px 20px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:700">🖨 Imprimir / Guardar PDF</button>
+  </div>
+  </body></html>`;
+  fsOpenHTML(html);
+}
+
+function cotGuardarHistorial(numCot, total){
+  // Save to historial
+  cotHistorial.unshift({
+    id: Date.now(),
+    num: numCot,
+    cliente: (document.getElementById('cotCliente')||{}).value||'',
+    items: JSON.parse(JSON.stringify(cotItems)),
+    total: total,
+    fecha: new Date().toLocaleDateString('es-MX'),
+    hora:  new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})
+  });
+  cotCounter++;
+  const nl = document.getElementById('cotNumLabel');
+  if(nl) nl.textContent = '#' + cotCounter;
+  addLog('cotizacion','Cotización generada — '+numCot,
+    cotItems.length+' productos · $'+total.toLocaleString('es-MX',{minimumFractionDigits:2})+
+    ((document.getElementById('cotCliente')||{}).value?' · Cliente: '+(document.getElementById('cotCliente').value):''),
+    currentUser,'#6366f1');
+}
+
+function cotPasarAlPOS(){
+  if(!cotItems.length){ showToast('No hay productos en la cotización','err'); return; }
+  // Copy items to POS ticketItems
+  ticketItems = cotItems.map(i=>({...i, _promoApplied:false}));
+  // Navigate to POS
+  const navEl = document.getElementById('nav-pos');
+  showModule('pos', navEl);
+  refreshPOSGrid();
+  renderTicket();
+  showToast('Cotización cargada en el Punto de Venta ✓');
+  addLog('pos','Cotización convertida a venta',
+    cotItems.length+' productos · $'+cotItems.reduce((a,i)=>a+i.price*i.qty,0).toLocaleString('es-MX',{minimumFractionDigits:2}),
+    currentUser,'#10b981');
 }
 
 // ══ FIRESTORE INVENTARIO — ARQUITECTURA POR DOCUMENTOS ═══════════════════════
