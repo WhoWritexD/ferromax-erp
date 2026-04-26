@@ -917,7 +917,7 @@ textarea.fi2{resize:vertical;min-height:65px;font-family:var(--font-sans);font-s
     <div class="log-filters">
       <div class="search-wrap" style="width:260px;flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a5166" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="logSearch" placeholder="Buscar..." oninput="renderLog()"></div>
       <select class="field-input" id="logUserFilter" onchange="renderLog()" style="width:160px"><option value="">Todos los usuarios</option></select>
-      <select class="field-input" id="logTypeFilter" onchange="renderLog()" style="width:160px"><option value="">Todos los tipos</option><option value="venta">Ventas</option><option value="inventario">Inventario</option><option value="ruta">Rutas</option><option value="sesion">Sesiones</option></select>
+      <select class="field-input" id="logTypeFilter" onchange="renderLog()" style="width:160px"><option value="">Todos los tipos</option><option value="venta">💰 Ventas</option><option value="inventario">📦 Inventario</option><option value="cotizacion">📋 Cotizaciones</option><option value="ruta">🚚 Rutas</option><option value="sesion">👤 Sesiones</option><option value="contactos">🤝 Contactos</option></select>
       <span class="text-muted text-sm text-mono" id="logCount"></span>
     </div>
     <div class="panel"><div class="panel-header"><span class="panel-title">Registro de Actividad</span><span class="badge badge-blue">Tiempo real</span></div><div id="logBody" style="max-height:calc(100vh - 260px);overflow-y:auto"></div></div>
@@ -1212,9 +1212,24 @@ function doLogout(){
 }
 
 // ══ LOG ══════════════════════════════════════════════════
-function addLog(type,event,detail,user,dot){const n=new Date();activityLog.unshift({id:Date.now(),type,event,detail,userId:user.id,userName:user.name,userInitials:user.initials,userColor:user.color,userBg:user.bg,dotColor:dot||'#f59e0b',time:n.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),date:n.toLocaleDateString('es-MX')});renderDashActivity();if(document.getElementById('mod-bitacora').classList.contains('active'))renderLog();}
+function addLog(type,event,detail,user,dot){
+  const n=new Date();
+  const entry={id:Date.now(),type,event,detail:detail||'',
+    userId:user?.id||'',userName:user?.name||'Sistema',
+    userInitials:user?.initials||'SYS',userColor:user?.color||'#94a3b8',userBg:user?.bg||'#1e293b',
+    dotColor:dot||'#f59e0b',
+    time:n.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),
+    date:n.toLocaleDateString('es-MX')};
+  activityLog.unshift(entry);
+  // Keep max 500 entries in memory
+  if(activityLog.length>500) activityLog.length=500;
+  // Save to Firestore (debounced)
+  if(typeof fsSaveLog === 'function') fsSaveLog();
+  renderDashActivity();
+  if(document.getElementById('mod-bitacora')&&document.getElementById('mod-bitacora').classList.contains('active'))renderLog();
+}
 function renderDashActivity(){const el=document.getElementById('dashActivity');if(!el)return;const r=activityLog.slice(0,5);if(!r.length){el.innerHTML='<div style="color:var(--text-muted);font-size:12px;padding:10px 0">Sin actividad registrada.</div>';return;}el.innerHTML=r.map(e=>`<div class="activity-item"><div class="activity-dot" style="background:${e.dotColor}"></div><div class="activity-desc"><strong>${e.event}</strong><br><span style="color:var(--text-muted);font-size:11px;font-family:var(--font-mono)">${e.detail}</span></div><div style="text-align:right"><div class="activity-time">${e.time}</div><div style="margin-top:3px"><span style="background:${e.userBg};color:${e.userColor};font-family:var(--font-mono);font-size:9px;padding:1px 6px;border-radius:3px">${e.userInitials}</span></div></div></div>`).join('');}
-function renderLog(){const s=(document.getElementById('logSearch')?.value||'').toLowerCase(),u=document.getElementById('logUserFilter')?.value||'',t=document.getElementById('logTypeFilter')?.value||'';const f=activityLog.filter(e=>(!s||e.event.toLowerCase().includes(s)||e.detail.toLowerCase().includes(s)||e.userName.toLowerCase().includes(s))&&(!u||e.userId===u)&&(!t||e.type===t));document.getElementById('logCount').textContent=f.length+' registros';const body=document.getElementById('logBody');if(!f.length){body.innerHTML='<div style="padding:24px;text-align:center;color:var(--text-muted);font-family:var(--font-mono);font-size:12px">Sin registros.</div>';return;}body.innerHTML=f.map(e=>`<div class="log-entry"><div class="log-timeline"><div class="log-dot" style="background:${e.dotColor}"></div><div class="log-line"></div></div><div class="log-body"><div class="log-event">${e.event}</div><div class="log-detail">${e.detail}</div></div><div class="log-meta"><div class="log-time">${e.date} · ${e.time}</div><div class="log-user-chip"><div class="log-avatar-sm" style="background:${e.userBg};color:${e.userColor}">${e.userInitials}</div>${e.userName}</div><span class="badge ${e.type==='venta'?'badge-green':e.type==='inventario'?'badge-blue':e.type==='ruta'?'badge-amber':'badge-gray'}">${e.type}</span></div></div>`).join('');}
+function renderLog(){const s=(document.getElementById('logSearch')?.value||'').toLowerCase(),u=document.getElementById('logUserFilter')?.value||'',t=document.getElementById('logTypeFilter')?.value||'';const f=activityLog.filter(e=>(!s||e.event.toLowerCase().includes(s)||e.detail.toLowerCase().includes(s)||e.userName.toLowerCase().includes(s))&&(!u||e.userId===u)&&(!t||e.type===t));document.getElementById('logCount').textContent=f.length+' registros';const body=document.getElementById('logBody');if(!f.length){body.innerHTML='<div style="padding:24px;text-align:center;color:var(--text-muted);font-family:var(--font-mono);font-size:12px">Sin registros.</div>';return;}body.innerHTML=f.map(e=>`<div class="log-entry"><div class="log-timeline"><div class="log-dot" style="background:${e.dotColor}"></div><div class="log-line"></div></div><div class="log-body"><div class="log-event">${e.event}</div><div class="log-detail">${e.detail}</div></div><div class="log-meta"><div class="log-time">${e.date} · ${e.time}</div><div class="log-user-chip"><div class="log-avatar-sm" style="background:${e.userBg};color:${e.userColor}">${e.userInitials}</div>${e.userName}</div><span class="badge ${e.type==='venta'?'badge-green':e.type==='inventario'?'badge-blue':e.type==='ruta'?'badge-amber':e.type==='cotizacion'?'badge-purple':e.type==='contactos'?'badge-teal':'badge-gray'}">${e.type}</span></div></div>`).join('');}
 function populateLogFilter(){document.getElementById('logUserFilter').innerHTML='<option value="">Todos los usuarios</option>'+USERS.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');}
 function renderUsersTable(){
   const body=document.getElementById('usersBody');
@@ -1339,7 +1354,7 @@ function saveUser(){
       document.getElementById('sidebarName').textContent=name;
       document.getElementById('sidebarRole').textContent=ROLES[role];
     }
-    addLog('sesion','Usuario editado — '+name,'Por: '+currentUser.name,currentUser,'#f59e0b');
+    addLog('sesion','Usuario editado — '+name,'Rol: '+ROLES[role]+' · Por: '+currentUser.name,currentUser,'#f59e0b');
     showToast('"'+name+'" actualizado correctamente');
   } else {
     const newUser = {
@@ -1432,6 +1447,10 @@ function showModule(id,el){
   const mod=document.getElementById('mod-'+id);if(!mod)return;
   mod.classList.add('active');if(el)el.classList.add('active');
   document.getElementById('headerTitle').textContent=MOD_TITLES[id]||id;
+  // Log module navigation for active sessions
+  if(currentUser && id !== 'dashboard'){
+    addLog('sesion','Módulo abierto — '+(MOD_TITLES[id]||id),'Por: '+currentUser.name,currentUser,'#475569');
+  }
   if(id==='bitacora')renderLog();
   if(id==='usuarios')renderUsersTable();
   if(id==='inventario'){iRefreshStats();iApplyFilters();setTimeout(function(){const s=document.getElementById('iSearch');if(s)s.focus();},80);if(currentUser?.role!=='admin')setTimeout(renderRutaInventarioPanel,100);}
@@ -1717,7 +1736,7 @@ function cobrar(){
       descontarStockRuta(item.sku, item.name, item.qty);
     } else {
       const prod = products.find(function(p){ return p.sku === item.sku || p.name === item.name; });
-      if(prod) prod.stock = Math.max(0, (+prod.stock) - (+item.qty));
+      if(prod){ const _ps=+prod.stock; prod.stock=Math.max(0,_ps-(+item.qty)); }
     }
   });
   iSave(); // guardar inventario actualizado
@@ -2370,7 +2389,7 @@ function lrConfirmarCierre(){
     const vendido=c.qty-regresa;
     if(regresa>0){
       const p=products.find(x=>x.id===c.prodId);
-      if(p) p.stock=+p.stock+regresa;
+      if(p){ const _prev=+p.stock; p.stock=+p.stock+regresa; addLog('inventario','Stock devuelto por ruta — '+p.name,'SKU: '+p.sku+' · +'+regresa+' uds · Stock: '+_prev+' → '+p.stock,currentUser,'#10b981'); }
     }
     totalVentaCarga+=vendido*(+c.precio||0);
     resumen.carga.push({...c,regresa,vendido,total:vendido*(+c.precio||0)});
@@ -3066,6 +3085,7 @@ function _onFirebaseReady(){
     iApplyFilters();
     iRefreshStats();
     refreshPOSGrid();
+    fsLoadLog();
     // Start real-time listeners after data is loaded
     fsStartListeners();
     // Restore session if saved
@@ -3175,12 +3195,18 @@ function guardarCliente(){
   }
   document.getElementById('clienteModal').classList.remove('open');
   renderClientes();
+  addLog('contactos',_editClienteId?'Cliente actualizado — '+nombre:'Cliente nuevo — '+nombre,
+    'Ciudad: '+(datos.ciudad||'—')+' · Tel: '+(datos.tel||'—')+' · Por: '+currentUser.name,
+    currentUser, _editClienteId?'#f59e0b':'#10b981');
   showToast(_editClienteId?'Cliente actualizado':'Cliente agregado ✓');
 }
 function eliminarCliente(id){
   if(!confirm('¿Eliminar este cliente?')) return;
+  const _c = clientes.find(c=>c.id===id);
   clientes = clientes.filter(c=>c.id!==id);
   saveClientes(); renderClientes();
+  addLog('contactos','Cliente eliminado — '+(_c?.nombre||id),
+    'Tel: '+(_c?.tel||'—')+' · Por: '+currentUser.name, currentUser,'#ef4444');
   showToast('Cliente eliminado');
 }
 
@@ -3454,6 +3480,9 @@ function guardarConfigFiscal(){
   saveConfigFiscal();
   document.getElementById('configFiscalModal').classList.remove('open');
   actualizarEmpresaPreview();
+  addLog('sesion','Configuración fiscal actualizada',
+    'Razón: '+configFiscal.razon+' · RFC: '+(configFiscal.rfc||'—')+' · Por: '+currentUser.name,
+    currentUser,'#6366f1');
   showToast('Datos fiscales guardados ✓');
 }
 function actualizarEmpresaPreview(){
@@ -3886,6 +3915,8 @@ function fsStartListeners(){
     function(e){ console.error('listener logistica:', e); }
   ));
 
+  // Bitácora en tiempo real
+  fsListenLog();
   console.log('Listeners tiempo real activos ✓');
 }
 // ── RECONEXIÓN AUTOMÁTICA (Chrome móvil suspende WebSockets) ─────────────────
@@ -4221,6 +4252,64 @@ function cotPasarAlPOS(){
   addLog('pos','Cotización convertida a venta',
     cotItems.length+' productos · $'+cotItems.reduce((a,i)=>a+i.price*i.qty,0).toLocaleString('es-MX',{minimumFractionDigits:2}),
     currentUser,'#10b981');
+}
+
+// ── BITÁCORA EN FIREBASE (sync entre dispositivos) ───────────────────────────
+function fsSaveLog(){
+  if(!db) return;
+  fsDebounced('log_bitacora', function(){
+    // Only save last 200 entries to Firestore
+    var toSave = activityLog.slice(0,200);
+    db.collection('ferromax').doc('bitacora').set({
+      entries: JSON.parse(JSON.stringify(toSave)),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(function(e){ console.error('fsSaveLog:', e); });
+  }, 1500);
+}
+
+function fsLoadLog(){
+  if(!db) return Promise.resolve();
+  return db.collection('ferromax').doc('bitacora').get().then(function(snap){
+    if(!snap.exists) return;
+    var d = snap.data();
+    if(d.entries && d.entries.length){
+      // Merge with local, deduplicate by id
+      var existing = new Set(activityLog.map(function(e){ return e.id; }));
+      d.entries.forEach(function(e){
+        if(!existing.has(e.id)) activityLog.push(e);
+      });
+      activityLog.sort(function(a,b){ return b.id - a.id; });
+      if(activityLog.length > 500) activityLog.length = 500;
+      renderDashActivity();
+      if(document.getElementById('mod-bitacora') &&
+         document.getElementById('mod-bitacora').classList.contains('active')) renderLog();
+    }
+  }).catch(function(e){ console.error('fsLoadLog:', e); });
+}
+
+function fsListenLog(){
+  if(!db) return;
+  var unsub = db.collection('ferromax').doc('bitacora').onSnapshot(
+    {includeMetadataChanges: true},
+    function(snap){
+      if(!snap.exists || snap.metadata.hasPendingWrites) return;
+      var d = snap.data();
+      if(!d.entries) return;
+      var existing = new Set(activityLog.map(function(e){ return e.id; }));
+      var added = false;
+      d.entries.forEach(function(e){
+        if(!existing.has(e.id)){ activityLog.push(e); added=true; }
+      });
+      if(added){
+        activityLog.sort(function(a,b){ return b.id - a.id; });
+        if(activityLog.length > 500) activityLog.length = 500;
+        renderDashActivity();
+        if(document.getElementById('mod-bitacora') &&
+           document.getElementById('mod-bitacora').classList.contains('active')) renderLog();
+      }
+    }, function(e){ console.error('listener bitacora:', e); }
+  );
+  _fsUnsubscribers.push(unsub);
 }
 
 // ══ FIRESTORE INVENTARIO — ARQUITECTURA POR DOCUMENTOS ═══════════════════════
