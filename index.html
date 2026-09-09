@@ -3054,6 +3054,9 @@ function printTicket(){
 document.addEventListener('DOMContentLoaded', function(){
   loadUsers();
   buildLoginGrid();
+  // Siempre mostrar pantalla de login inmediatamente — no esperar a Firebase
+  var _ls = document.getElementById('loginScreen');
+  if(_ls) _ls.style.display = 'flex';
   iLoadFromStorage();
   iBuildCatSelects();
   logLoad();
@@ -5366,12 +5369,50 @@ body.rol-vendedor #fCostWrapper, body.rol-repartidor #fCostWrapper { display:non
 
 
   <!-- Firebase SDK — loaded last so DOM is ready -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js" onload="
-    var s2=document.createElement('script');
-    s2.src='https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js';
-    s2.onload=function(){ if(typeof _onFirebaseReady==='function') _onFirebaseReady(); };
+  <script>
+// ── Firebase SDK loader con manejo de errores ─────────────────────────────────
+(function(){
+  var _firebaseLoaded = false;
+
+  function loadFirestore(){
+    var s2 = document.createElement('script');
+    s2.src = 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js';
+    s2.onload = function(){
+      _firebaseLoaded = true;
+      if(typeof _onFirebaseReady === 'function') _onFirebaseReady();
+    };
+    s2.onerror = function(){
+      console.warn('Firestore SDK failed to load — working offline');
+      showLoginFallback();
+    };
     document.head.appendChild(s2);
-  "></script>
+  }
+
+  function showLoginFallback(){
+    // Show login even without Firebase
+    if(typeof buildLoginGrid === 'function') buildLoginGrid();
+    var ls = document.getElementById('loginScreen');
+    if(ls) ls.style.display = 'flex';
+  }
+
+  var s1 = document.createElement('script');
+  s1.src = 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js';
+  s1.onload = function(){ loadFirestore(); };
+  s1.onerror = function(){
+    console.warn('Firebase App SDK failed to load — working offline');
+    showLoginFallback();
+  };
+  document.head.appendChild(s1);
+
+  // Fallback: if Firebase hasn't loaded after 8 seconds, show login anyway
+  setTimeout(function(){
+    if(!_firebaseLoaded){
+      console.warn('Firebase timeout — showing login offline');
+      showLoginFallback();
+    }
+  }, 8000);
+})();
+</script>
 </body>
 
 <!-- ══ ADMIN AUTH MODAL ══════════════════════════════════════════════════ -->
