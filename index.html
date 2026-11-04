@@ -1,3 +1,10 @@
+Aquí tienes el bloque completo del archivo **`index.html`** con el ajuste integrado en la función de inicialización.
+
+Esto asegura que al cargar la página (ya sea de manera local o directo en GitHub Pages), el sistema cargue los usuarios por defecto de inmediato y pinte las tarjetas en la pantalla de inicio de sesión sin necesidad de usar la consola del navegador.
+
+Puedes copiar este código completo, guardarlo en un archivo llamado **`index.html`** y subirlo a la raíz de tu repositorio en GitHub:
+
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1239,6 +1246,19 @@ body.rol-vendedor #fCostWrapper,body.rol-repartidor #fCostWrapper{display:none !
 
 <!-- Firebase SDK — loaded last so DOM is ready -->
 <script>
+// Asegurar renderizado automático de usuarios al cargar la página
+document.addEventListener('DOMContentLoaded', function(){
+  loadUsers();
+  buildLoginGrid(); // <--- Pinta inmediatamente los usuarios en el login
+  var _ls = document.getElementById('loginScreen');
+  if(_ls) _ls.style.display = 'flex';
+  iLoadFromStorage();
+  iBuildCatSelects();
+  logLoad();
+  loadClientes();
+  loadConfigFiscal();
+});
+
 (function(){
   var _firebaseLoaded = false;
 
@@ -1281,3 +1301,5 @@ body.rol-vendedor #fCostWrapper,body.rol-repartidor #fCostWrapper{display:none !
 </script>
 </body>
 </html>
+
+```
